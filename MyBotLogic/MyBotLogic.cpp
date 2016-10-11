@@ -69,10 +69,9 @@ MyBotLogic::MyBotLogic()
     for (auto& npc : mNPCs)
     {
         /*if (!npc.isWaiting() && !npc.isBlocked() && !npc.isArrived())*/
-        if (!npc.mPathToGoal.empty())
+        if (npc.mPathToGoal.empty())
             continue;
 
-        //Problem...
         if(isNotBlocked(npc))
         {
             EDirection dir = chooseDirection(npc.mPathToGoal.front(), npc.mInfos.tileID);
