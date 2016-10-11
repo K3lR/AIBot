@@ -20,10 +20,10 @@ public:
     Heuristic(Node* goal) : mGoalNode{ goal } {}
     ~Heuristic() {};
 
-    cost_type estimate(Node* start);
+    cost_type estimate(Node* start, const LevelInfo&);
 
 private:
-    cost_type manhattanDistance(Node* start, Node* goal);
+    cost_type manhattanDistance(Node* start, Node* goal, const LevelInfo&);
 
 };
 

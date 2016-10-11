@@ -1,15 +1,16 @@
 #include "Heuristic.h"
+#include "LevelInfo.h"
 #include "Node.h"
 
 
-Heuristic::cost_type Heuristic::estimate(Node * start)
+Heuristic::cost_type Heuristic::estimate(Node * start, const LevelInfo& lvlInfo)
 {
-    return manhattanDistance(start, mGoalNode);
+    return manhattanDistance(start, mGoalNode, lvlInfo);
 }
 
-Heuristic::cost_type Heuristic::manhattanDistance(Node* start, Node* goal)
+Heuristic::cost_type Heuristic::manhattanDistance(Node* start, Node* goal, const LevelInfo& lvlInfo)
 {
-    return 0;
-    /*return subUInt(start->getID() % mColCount, goal->getID() % mColCount)
-    + subUInt(start->getID() * mInvColCount, goal->getID() * mInvColCount);*/
+    //return 0;
+    return subUInt(start->getID() % lvlInfo.colCount, goal->getID() % lvlInfo.colCount)
+    + subUInt(start->getID() / lvlInfo.colCount, goal->getID() / lvlInfo.colCount);
 }

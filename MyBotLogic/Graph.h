@@ -21,36 +21,24 @@ public:
 private:
     static Graph singletonGraph;
 
-    int mRowCount, mColCount, mInvColCount; //TODO : relocate in MyBotLogic
     std::vector<TileInfo*> mTargets;        //TODO : relocate in MyBotLogic
     
     std::vector<Node*> mGraph;
 
     Graph() noexcept;
     void addNode(Node* node) { mGraph.emplace_back(node); }
-    void connectSurroundings(TurnInfo&);
-    void connectionEvenLinesOnRight(const std::pair<unsigned int, TileInfo>&, int);
-
-    //***TODO : relocate in MyBotLogic
-    //bool isForbidden(Node* node);
+    void connectSurroundings(TurnInfo&, LevelInfo&);
+    void connectionEvenLinesOnRight(LevelInfo&, const std::pair<unsigned int, TileInfo>&, int);
+    void init(const LevelInfo&);
 
 public : 
-    //***TODO : relocate in MyBotLogic
-    //const cost_type CONNECTION_COST{ 10 };
-
     ~Graph() {}
     static Graph& Instance() noexcept { return singletonGraph; }
-
-    void init(LevelInfo&);
-    void createGraph(TurnInfo& turnInfo);
-
-    bool isEmpty() const { return mGraph.empty(); }
-
+    
+    void createGraph(TurnInfo&, LevelInfo&);
+    std::vector<Node*> getGraph() const noexcept { return mGraph; }
     Node* getNode(int i) const { return mGraph[i]; }
-
-    //***TODO : relocate in MyBotLogic
-    /*std::list<unsigned int> pathFinderAStar(const unsigned int& startID, const unsigned int& goalID, Heuristic&);*/
-
+    bool isEmpty() const noexcept { return mGraph.empty(); }
 };
 
 #endif // !GRAPH_H
