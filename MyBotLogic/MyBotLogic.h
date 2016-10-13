@@ -10,13 +10,13 @@
 #include <vector>
 
 #ifdef _DEBUG
-   #define BOT_LOGIC_DEBUG
+#define BOT_LOGIC_DEBUG
 #endif
 
 #ifdef BOT_LOGIC_DEBUG
-   #define BOT_LOGIC_LOG(logger, text, autoEndLine) logger.Log(text, autoEndLine)
+#define BOT_LOGIC_LOG(logger, text, autoEndLine) logger.Log(text, autoEndLine)
 #else
-   #define BOT_LOGIC_LOG(logger, text, autoEndLine) 0
+#define BOT_LOGIC_LOG(logger, text, autoEndLine) 0
 #endif
 
 struct CostCompare;
@@ -29,21 +29,21 @@ class Node;
 class MyBotLogic : public virtual BotLogicIF
 {
 public:
-	MyBotLogic();
-	virtual ~MyBotLogic();
+    MyBotLogic();
+    virtual ~MyBotLogic();
 
-	virtual void Configure(int argc, char *argv[], const std::string& _logpath);
-	virtual void Load();
-	virtual void OnBotInitialized();
-	virtual void Init(LevelInfo& _levelInfo);
-	virtual void OnGameStarted();
-	virtual void FillActionList(TurnInfo& _turnInfo, std::vector<Action*>& _actionList);   //calculate moves for a single turn
-	virtual void Exit();
+    virtual void Configure(int argc, char *argv[], const std::string& _logpath);
+    virtual void Load();
+    virtual void OnBotInitialized();
+    virtual void Init(LevelInfo& _levelInfo);
+    virtual void OnGameStarted();
+    virtual void FillActionList(TurnInfo& _turnInfo, std::vector<Action*>& _actionList);   //calculate moves for a single turn
+    virtual void Exit();
 
     /* Personal content */
 
     using cost_type = Graph::cost_type;
-    using distance_id_pair_type = std::multimap<cost_type, unsigned int /*, CostCompare*/>;
+    using distance_id_pair_type = std::multimap<cost_type, unsigned int>;
 
     const cost_type CONNECTION_COST{ 10 };
 
@@ -59,13 +59,16 @@ private:
     EDirection chooseDirection(const unsigned int&, const unsigned int&);
     void findAllTargets(const std::vector<Node*>& graph);
     distance_id_pair_type findNearestTargetsByNPC(const std::vector<Node*>&, const NPCInfo&);
+    void findNewPath(NPC &npc);
     void initNpcs(const TurnInfo&);
     bool isForbidden(Node* node);
+    bool isBusy(Node* node);
     bool isNotBlocked(const NPC&);
+    void moveNPC(NPC &npc, std::vector<Action *> &_actionList);
     void updateNPCs(NPC&);
     void updateTurn(const TurnInfo&);
 
 protected:
-	Logger mLogger;
+    Logger mLogger;
 };
 

@@ -44,6 +44,8 @@ public:
 
     unsigned int getID() const { return mTileInfo.tileID; }
     std::set<ETileAttribute>& getTileAttributes() { return mTileInfo.tileAttributes; }
+    void insertTileAttribute(const ETileAttribute& tileAttrib) { mTileInfo.tileAttributes.insert(tileAttrib); }
+    void removeTileAttribute(const ETileAttribute& tileAttrib) { mTileInfo.tileAttributes.erase(tileAttrib); }
     std::vector<Node*> getNeighbours() const { return mNeighbours; }
     Node* getNeighbour(int i) const { return mNeighbours[i]; }
     void setNeighbour(Node* neighbour, unsigned int idxNeighb, unsigned int idxCurr)

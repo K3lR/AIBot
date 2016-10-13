@@ -15,14 +15,17 @@ private:
 
 public:
     NPC(const NPCInfo& infos, const distance_id_pair_type& nearest, const std::list<unsigned int>& path)
-        : mInfos{ infos }, mNearestTargets{ nearest }, mPathToGoal{ path },
-        mNextTileID{ infos.tileID }/*, mState{ START }, mTurnWait{ 0 }*/
-    {}
+        : mNearestTargets{ nearest }, mPathToGoal{ path },
+        mNextTileID{ infos.tileID }, mNbTurnBlocked{ 0 }/*, mState{ START }, mTurnWait{ 0 }*/
+    {
+        mInfos = infos;
+    }
     ~NPC() {}
 
     NPCInfo mInfos;
     unsigned int mNextTileID;
-    EState mState;
+    unsigned int mNbTurnBlocked;
+    //EState mState;
 
     distance_id_pair_type mNearestTargets;  //Sorted targets ID from nearest to furthest
     std::list<unsigned int> mPathToGoal;    //Path of Tile IDs to goal

@@ -17,24 +17,24 @@ MyBotLogic::MyBotLogic()
 
 /*virtual*/ MyBotLogic::~MyBotLogic()
 {
-	//Write Code Here
+    //Write Code Here
 }
 
 /*virtual*/ void MyBotLogic::Configure(int argc, char *argv[], const std::string& _logpath)
 {
 #ifdef BOT_LOGIC_DEBUG
-	mLogger.Init(_logpath, "MyBotLogic.log");
+    mLogger.Init(_logpath, "MyBotLogic.log");
 #endif
 
-	BOT_LOGIC_LOG(mLogger, "Configure", true);
-	
-	
-	//Write Code Here
+    BOT_LOGIC_LOG(mLogger, "Configure", true);
+
+
+    //Write Code Here
 }
 
 /*virtual*/ void MyBotLogic::Load()
 {
-	//Write Code Here
+    //Write Code Here
 }
 
 /*virtual*/ void MyBotLogic::Init(LevelInfo& _levelInfo)
@@ -47,12 +47,12 @@ MyBotLogic::MyBotLogic()
 
 /*virtual*/ void MyBotLogic::OnBotInitialized()
 {
-	//Write Code Here
+    //Write Code Here
 }
 
 /*virtual*/ void MyBotLogic::OnGameStarted()
 {
-	//Write Code Here
+    //Write Code Here
 }
 
 /*virtual*/ void MyBotLogic::FillActionList(TurnInfo& _turnInfo, std::vector<Action*>& _actionList)
@@ -68,40 +68,45 @@ MyBotLogic::MyBotLogic()
 
     for (auto& npc : mNPCs)
     {
-        /*if (!npc.isWaiting() && !npc.isBlocked() && !npc.isArrived())*/
         if (npc.mPathToGoal.empty())
             continue;
 
-        if(isNotBlocked(npc))
+        if (!isNotBlocked(npc))
         {
-            EDirection dir = chooseDirection(npc.mPathToGoal.front(), npc.mInfos.tileID);
-            _actionList.emplace_back(new Move{ npc.mInfos.npcID, dir });
-
-            npc.mNextTileID = npc.mPathToGoal.front();
-            npc.mPathToGoal.pop_front();
+            ++npc.mNbTurnBlocked;
+            if (npc.mNbTurnBlocked == 1)
+            {
+                continue;
+            }
+            else if (npc.mNbTurnBlocked == 2)
+            {
+                Graph::Instance().getNode(npc.mPathToGoal.front())->insertTileAttribute(TileAttribute_Obstacle);
+                findNewPath(npc);
+            }
         }
-        //updateNPCs(npc);
+
+        moveNPC(npc, _actionList);
     }
 
 
-   /* for (auto& npcInfoPair : _turnInfo.npcs)
-    {
-        //1. Compute nearestTargets
+    /* for (auto& npcInfoPair : _turnInfo.npcs)
+     {
+         //1. Compute nearestTargets
 
-        //2. Compute A* to get opti path
+         //2. Compute A* to get opti path
 
-        //3. Get direction to next tile
+         //3. Get direction to next tile
 
-        //4. If not blocked, push Action : Move to next tile
-        //   Else if : first turn blocked, wait for it...
-        //   Else :    target is already occupied, compute new path
+         //4. If not blocked, push Action : Move to next tile
+         //   Else if : first turn blocked, wait for it...
+         //   Else :    target is already occupied, compute new path
 
-    }*/
+     }*/
 }
 
 /*virtual*/ void MyBotLogic::Exit()
 {
-	//Write Code Here
+    //Write Code Here
 }
 
 
@@ -134,7 +139,7 @@ std::list<unsigned int> MyBotLogic::pathFinderAStar(const Graph& graph, const un
         NodeRecord* endNodeRecord = new NodeRecord{};
         for (auto& neighbour : currentNode->getNeighbours())
         {
-            if (!neighbour || isForbidden(neighbour))
+            if (!neighbour || isForbidden(neighbour) || isBusy(neighbour))
                 continue;
 
             //Node* endNode = neighbour;
@@ -205,7 +210,7 @@ std::list<unsigned int> MyBotLogic::pathFinderAStar(const Graph& graph, const un
 
 EDirection MyBotLogic::chooseDirection(const unsigned int& destinationTileID, const unsigned int& npcTileID)
 {
-    class Error_NoDirectionFound{};
+    class Error_NoDirectionFound {};
     int delta = destinationTileID - npcTileID;
 
     //Forward-backward direction
@@ -286,6 +291,13 @@ MyBotLogic::distance_id_pair_type MyBotLogic::findNearestTargetsByNPC(const std:
     return distancesToTargets;
 }
 
+void MyBotLogic::findNewPath(NPC &npc)
+{
+    npc.mNearestTargets.erase(npc.mNearestTargets.begin());
+    npc.mPathToGoal = pathFinderAStar(Graph::Instance(), npc.mInfos.tileID, npc.mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(npc.mNearestTargets.begin()->second)));
+    npc.mNbTurnBlocked = 0;
+}
+
 void MyBotLogic::initNpcs(const TurnInfo& turnInfo)
 {
     for (auto& npcInfoPair : turnInfo.npcs)
@@ -295,6 +307,17 @@ void MyBotLogic::initNpcs(const TurnInfo& turnInfo)
 
         mNPCs.emplace_back(NPC{ npcInfoPair.second, nearestTargets, pathToGoal });
     }
+}
+
+bool MyBotLogic::isBusy(Node* node)
+{
+    if (!node)
+        return false;
+
+    return std::find(node->getTileAttributes().begin(),
+        node->getTileAttributes().end(),
+        TileAttribute_Obstacle)
+        != node->getTileAttributes().end();
 }
 
 bool MyBotLogic::isForbidden(Node* node)
@@ -314,12 +337,23 @@ bool MyBotLogic::isNotBlocked(const NPC& npc)
     {
         if (i == npc.mInfos.npcID - 1)
             continue;
-        
+
         if (npc.mPathToGoal.front() == mNPCs[i].mNextTileID)
+        {
             return false;
+        }
     }
 
     return true;
+}
+
+void MyBotLogic::moveNPC(NPC &npc, std::vector<Action *> &_actionList)
+{
+    EDirection dir = chooseDirection(npc.mPathToGoal.front(), npc.mInfos.tileID);
+    _actionList.emplace_back(new Move{ npc.mInfos.npcID, dir });
+
+    npc.mNextTileID = npc.mPathToGoal.front();
+    npc.mPathToGoal.pop_front();
 }
 
 void MyBotLogic::updateTurn(const TurnInfo& turnInfo)
