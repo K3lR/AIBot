@@ -37,6 +37,16 @@ void Graph::createGraph(TurnInfo& turnInfo, LevelInfo& lvlInfo)
         else
             addNode(new Node{ currIterTile.second });
 
+        if (std::find(
+                        std::begin(currIterTile.second.tileAttributes),
+                        std::end(currIterTile.second.tileAttributes),
+                        TileAttribute_Target)
+            != std::end(currIterTile.second.tileAttributes)
+            )
+        {
+            mTargets.emplace_back(mGraph[currIterTile.second.tileID]);
+        }
+
         ++idNeighbour;
     });
 

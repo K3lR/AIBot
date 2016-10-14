@@ -53,6 +53,17 @@ public:
         mNeighbours[idxNeighb] = neighbour;
         neighbour->mNeighbours[idxCurr] = this;
     }
+
+    bool containsAttribute(const ETileAttribute& attrib)
+    {
+        if (!this)
+            return false;
+
+        return std::find(getTileAttributes().begin(),
+            getTileAttributes().end(),
+            attrib)
+            != getTileAttributes().end();
+    }
 };
 
 #endif // !NODE_H

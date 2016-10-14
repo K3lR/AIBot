@@ -21,7 +21,7 @@
 
 struct CostCompare;
 struct LevelInfo;
-struct NPC;
+class NPC;
 class Node;
 
 //Custom BotLogic where the AIBot decision making algorithms should be implemented.
@@ -53,19 +53,13 @@ private:
     LevelInfo mLevelInfo;
     float mInvColCount;
 
-    std::vector<unsigned int> mTargetsID;
     std::vector<NPC> mNPCs;
 
     EDirection chooseDirection(const unsigned int&, const unsigned int&);
-    void findAllTargets(const std::vector<Node*>& graph);
     distance_id_pair_type findNearestTargetsByNPC(const std::vector<Node*>&, const NPCInfo&);
     void findNewPath(NPC &npc);
     void initNpcs(const TurnInfo&);
-    bool isForbidden(Node* node);
-    bool isBusy(Node* node);
-    bool isNotBlocked(const NPC&);
     void moveNPC(NPC &npc, std::vector<Action *> &_actionList);
-    void updateNPCs(NPC&);
     void updateTurn(const TurnInfo&);
 
 protected:

@@ -21,7 +21,7 @@ public:
 private:
     static Graph singletonGraph;
 
-    std::vector<TileInfo*> mTargets;        //TODO : relocate in MyBotLogic
+    std::vector<Node*> mTargets;        //TODO : relocate in MyBotLogic
     
     std::vector<Node*> mGraph;
 
@@ -37,8 +37,11 @@ public :
     
     void createGraph(TurnInfo&, LevelInfo&);
     std::vector<Node*> getGraph() const noexcept { return mGraph; }
+    std::vector<Node*> getTargetList() const noexcept { return mTargets; }
     Node* getNode(int i) const { return mGraph[i]; }
     bool isEmpty() const noexcept { return mGraph.empty(); }
+
+
 };
 
 #endif // !GRAPH_H
@@ -48,17 +51,12 @@ public :
 
 struct NodeRecord
 {
-    //enum State { UNVISITED, OPEN, CLOSED };
-
     using cost_type = Graph::cost_type;
-    //using category_type = State;
 
     Node* mNode;
     NodeRecord* mPrevious;
     cost_type mCostSoFar;
     cost_type mEstimatedTotalCost;
-    //category_type mState;
-    //NodeRecord* mNextRecord;
     
     NodeRecord()
         : mNode{ nullptr }, mPrevious{ nullptr }, mCostSoFar{ 0 }, mEstimatedTotalCost{ 0 }/*, mState{ UNVISITED }, mNextRecord{ nullptr }*/
