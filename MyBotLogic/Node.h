@@ -15,6 +15,13 @@ private:
 
     Node* mFrom;                        //Maybe not so useful...
     std::vector<Node*> mNeighbours;     //CW - 0 on right side
+	struct Flags
+	{
+		bool obstacle;
+		bool forbidden;
+	} mFlags{};
+
+
 
 public:
     Node(Node* other)
@@ -35,7 +42,6 @@ public:
 
         from->mNeighbours[0] = this;
     }
-    //TODO: constructeur par mouvement
 
     ~Node()
     {
@@ -44,8 +50,6 @@ public:
 
     unsigned int getID() const { return mTileInfo.tileID; }
     std::set<ETileAttribute>& getTileAttributes() { return mTileInfo.tileAttributes; }
-    void insertTileAttribute(const ETileAttribute& tileAttrib) { mTileInfo.tileAttributes.insert(tileAttrib); }
-    void removeTileAttribute(const ETileAttribute& tileAttrib) { mTileInfo.tileAttributes.erase(tileAttrib); }
     std::vector<Node*> getNeighbours() const { return mNeighbours; }
     Node* getNeighbour(int i) const { return mNeighbours[i]; }
     void setNeighbour(Node* neighbour, unsigned int idxNeighb, unsigned int idxCurr)
@@ -53,17 +57,33 @@ public:
         mNeighbours[idxNeighb] = neighbour;
         neighbour->mNeighbours[idxCurr] = this;
     }
-
-    bool containsAttribute(const ETileAttribute& attrib)
-    {
-        if (!this)
-            return false;
-
-        return std::find(getTileAttributes().begin(),
-            getTileAttributes().end(),
-            attrib)
-            != getTileAttributes().end();
-    }
+	void setObstacleFlag(const bool& flagVal) { mFlags.obstacle = flagVal; }
+	void setForbiddenFlag(const bool& flagVal) { mFlags.forbidden = flagVal; }
+	void setFlags(const std::set<ETileAttribute>& tileAttributes)
+	{
+		if (std::find(
+			std::begin(tileAttributes),
+			std::end(tileAttributes),
+			TileAttribute_Obstacle)
+			!= std::end(tileAttributes)
+			)
+		{
+			mFlags.obstacle = true;
+		}
+		if (std::find(
+			std::begin(tileAttributes),
+			std::end(tileAttributes),
+			TileAttribute_Forbidden)
+			!= std::end(tileAttributes)
+			)
+		{
+			mFlags.forbidden = true;
+		}
+	}
+	bool isAvailable()
+	{
+		return mFlags.obstacle || mFlags.forbidden;
+	}
 };
 
 #endif // !NODE_H

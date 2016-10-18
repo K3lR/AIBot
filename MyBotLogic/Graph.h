@@ -69,6 +69,7 @@ struct NodeRecord
     NodeRecord(Node* n, const cost_type& costSoFar, const cost_type& estimatedCost)
         : mNode{ n }, mPrevious{ nullptr }, mCostSoFar{ costSoFar }, mEstimatedTotalCost{ estimatedCost }/*, mState{ UNVISITED }, mNextRecord{}*/
     {}
+	~NodeRecord() {}
 
     bool operator<(NodeRecord* other)
     {

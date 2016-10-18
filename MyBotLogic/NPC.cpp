@@ -95,8 +95,7 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 		NodeRecord* endNodeRecord = new NodeRecord{};
 		for (auto& neighbour : currentNode->getNeighbours())
 		{
-			if (!neighbour || neighbour->containsAttribute(TileAttribute_Forbidden)
-				|| neighbour->containsAttribute(TileAttribute_Obstacle))
+			if (!neighbour || neighbour->isAvailable())
 			{
 				continue;
 			}
@@ -191,7 +190,7 @@ void NPC::update(std::vector<NPC>& npcs, std::vector<Action*>& actionList)
 		}
 		else if (mNbTurnBlocked == 2)
 		{
-			Graph::Instance().getNode(mPathToGoal.front())->insertTileAttribute(TileAttribute_Obstacle);
+			Graph::Instance().getNode(mPathToGoal.front())->setObstacleFlag(true);
 			findNewPath();
 		}
 	}

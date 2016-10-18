@@ -8,8 +8,6 @@
 #include <iterator>
 #include <queue>
 
-//Debug
-#include <cassert>
 
 Graph Graph::singletonGraph;
 
@@ -45,6 +43,9 @@ void Graph::init(LevelInfo& lvlInfo)
         {
             mTargets.emplace_back(mGraph[currIterTile.second.tileID]);
         }
+
+		mGraph[currIterTile.second.tileID]->setFlags(currIterTile.second.tileAttributes);
+
 
         ++idNeighbour;
     });
