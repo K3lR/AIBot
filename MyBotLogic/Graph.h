@@ -2,6 +2,7 @@
 #define GRAPH_H
 
 #include "Incopiable.h"
+#include "LevelInfo.h"
 #include <algorithm>
 #include <vector>
 #include <list>
@@ -9,7 +10,6 @@
 class Heuristic;
 class Node;
 
-struct LevelInfo;
 struct TileInfo;
 struct TurnInfo;
 
@@ -17,28 +17,30 @@ class Graph : Incopiable
 {
 public: 
     using cost_type = unsigned int;
+	const cost_type CONNECTION_COST{ 10 };
 
 private:
     static Graph singletonGraph;
 
-    std::vector<Node*> mTargets;        //TODO : relocate in MyBotLogic
-    
     std::vector<Node*> mGraph;
+    std::vector<Node*> mTargets;
+	LevelInfo mLevelInfo;
 
     Graph() noexcept;
     void addNode(Node* node) { mGraph.emplace_back(node); }
-    void connectSurroundings(TurnInfo&, LevelInfo&);
-    void connectionEvenLinesOnRight(LevelInfo&, const std::pair<unsigned int, TileInfo>&, int);
-    void init(const LevelInfo&);
+    void connectSurroundings();
+    void connectionEvenLinesOnRight(const std::pair<unsigned int, TileInfo>&, int);
 
 public : 
     ~Graph() {}
     static Graph& Instance() noexcept { return singletonGraph; }
-    
-    void createGraph(TurnInfo&, LevelInfo&);
+    void init(LevelInfo&);
+
     std::vector<Node*> getGraph() const noexcept { return mGraph; }
     std::vector<Node*> getTargetList() const noexcept { return mTargets; }
     Node* getNode(int i) const { return mGraph[i]; }
+	LevelInfo getLevelInfo() const { return mLevelInfo; }
+
     bool isEmpty() const noexcept { return mGraph.empty(); }
 
 

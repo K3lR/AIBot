@@ -2,6 +2,7 @@
 #define NPC_H
 
 #include <list>
+#include "MyBotLogic.h"
 
 struct NPCInfo;
 
@@ -14,15 +15,6 @@ public:
 private:
     enum EState { START, BLOCKED, MOVING, WAITING, ARRIVED };
 
-public:
-    NPC(const NPCInfo& infos, const distance_id_pair_type& nearest, const std::list<unsigned int>& path)
-        : mNearestTargets{ nearest }, mPathToGoal{ path },
-        mNextTileID{ infos.tileID }, mNbTurnBlocked{ 0 }
-    {
-        mInfos = infos;
-    }
-    ~NPC() {}
-
     NPCInfo mInfos;
     unsigned int mNextTileID;
     unsigned int mNbTurnBlocked;
@@ -31,6 +23,14 @@ public:
     std::list<unsigned int> mPathToGoal;    //Path of Tile IDs to goal
 
 public:
+	NPC(const NPCInfo& infos, const distance_id_pair_type& nearest)
+		: mNearestTargets{ nearest }, mNextTileID{ infos.tileID }, mNbTurnBlocked{ 0 }
+	{
+		mInfos = infos;
+		mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID, mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(mNearestTargets.begin()->second)));
+	}
+	~NPC() {}
+
     bool isArrived()
     {
         return mPathToGoal.empty();
@@ -53,6 +53,14 @@ public:
         return true;
     }
 
+	void update(std::vector<NPC>& npcs, std::vector<Action*>& actionList);
+	void updateInfos(const NPCInfo& npcInfo);
+
+private:
+	EDirection chooseDirection(const unsigned int&, const unsigned int&);
+	void move(std::vector<Action *> &_actionList);
+	std::list<unsigned int> pathFinderAStar(const Graph& graph, const unsigned int& startID, const unsigned int& goalID, Heuristic&);
+	void findNewPath();
     void updatePathToGoal()
     {
         mNextTileID = mPathToGoal.front();

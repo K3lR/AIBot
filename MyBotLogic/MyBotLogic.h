@@ -18,8 +18,7 @@
 #else
 #define BOT_LOGIC_LOG(logger, text, autoEndLine) 0
 #endif
-
-struct CostCompare;
+;
 struct LevelInfo;
 class NPC;
 class Node;
@@ -45,21 +44,11 @@ public:
     using cost_type = Graph::cost_type;
     using distance_id_pair_type = std::multimap<cost_type, unsigned int>;
 
-    const cost_type CONNECTION_COST{ 10 };
-
-    std::list<unsigned int> pathFinderAStar(const Graph& graph, const unsigned int& startID, const unsigned int& goalID, Heuristic&);
-
 private:
-    LevelInfo mLevelInfo;
-    float mInvColCount;
-
     std::vector<NPC> mNPCs;
 
-    EDirection chooseDirection(const unsigned int&, const unsigned int&);
     distance_id_pair_type findNearestTargetsByNPC(const std::vector<Node*>&, const NPCInfo&);
-    void findNewPath(NPC &npc);
-    void initNpcs(const TurnInfo&);
-    void moveNPC(NPC &npc, std::vector<Action *> &_actionList);
+    void initNpcs();
     void updateTurn(const TurnInfo&);
 
 protected:
