@@ -8,30 +8,27 @@
 #include <iterator>
 #include <queue>
 
-//Debug
-#include <cassert>
 
 Graph Graph::singletonGraph;
 
 Graph::Graph() noexcept : mGraph{}, mTargets{}
 {}
-void Graph::init(const LevelInfo& lvlInfo)
-{
-    mGraph.reserve(lvlInfo.rowCount * lvlInfo.colCount);
-}
 
-void Graph::createGraph(TurnInfo& turnInfo, LevelInfo& lvlInfo)
+void Graph::init(LevelInfo& lvlInfo)
 {
-    addNode(new Node{ turnInfo.tiles[0] });
+	mLevelInfo = lvlInfo;
+    mGraph.reserve(mLevelInfo.rowCount * mLevelInfo.colCount);
+
+    addNode(new Node{ mLevelInfo.tiles[0] });
 
     //Horizontal node connections
     int idNeighbour = 0;
-    std::for_each(std::next(std::begin(turnInfo.tiles)),
-        std::end(turnInfo.tiles),
-        [&idNeighbour, &lvlInfo, this](std::pair<unsigned int, TileInfo> currIterTile)
+    std::for_each(std::next(std::begin(mLevelInfo.tiles)),
+        std::end(mLevelInfo.tiles),
+        [&idNeighbour, this](std::pair<unsigned int, TileInfo> currIterTile)
     {
         //Adds & connects both current & previous nodes
-        if (currIterTile.second.tileID % lvlInfo.colCount != 0)
+        if (currIterTile.second.tileID % mLevelInfo.colCount != 0)
             addNode(new Node{ currIterTile.second, mGraph[idNeighbour] });
         //Only adds
         else
@@ -47,21 +44,33 @@ void Graph::createGraph(TurnInfo& turnInfo, LevelInfo& lvlInfo)
             mTargets.emplace_back(mGraph[currIterTile.second.tileID]);
         }
 
+		mGraph[currIterTile.second.tileID]->setFlags(currIterTile.second.tileAttributes);
+
+
         ++idNeighbour;
     });
 
     //Vertical node connections
-    connectSurroundings(turnInfo, lvlInfo);
+    connectSurroundings();
+
+	for (auto& obj : mLevelInfo.objects)
+	{
+		mGraph[obj.second.tileID]->setWalls(obj.second.edgesCost);
+	}
+	for (auto& npc : mLevelInfo.npcs)
+	{
+		mGraph[npc.second.tileID]->taken() = true;
+	}
 }
 
-void Graph::connectSurroundings(TurnInfo& turnInfo, LevelInfo& lvlInfo)
+void Graph::connectSurroundings()
 {
     int idNeighbour = 0;
-    std::for_each(turnInfo.tiles.find(lvlInfo.colCount),
-        turnInfo.tiles.end(),
-        [&idNeighbour, &lvlInfo, this](std::pair<unsigned int, TileInfo> currIterTile)
+    std::for_each(mLevelInfo.tiles.find(mLevelInfo.colCount),
+		mLevelInfo.tiles.end(),
+        [&idNeighbour, this](std::pair<unsigned int, TileInfo> currIterTile)
     {
-        connectionEvenLinesOnRight(lvlInfo, currIterTile, idNeighbour);
+        connectionEvenLinesOnRight(currIterTile, idNeighbour);
         ++idNeighbour;
     });
 }
@@ -69,11 +78,11 @@ void Graph::connectSurroundings(TurnInfo& turnInfo, LevelInfo& lvlInfo)
 /* Links all nodes of a line with their corresponding above & under neighbours.
 **NOTE: this method is ONLY VALID when the EVEN lines are shifted of one Tile to the RIGHT.
 */
-void Graph::connectionEvenLinesOnRight(LevelInfo& lvlInfo, const std::pair<unsigned int, TileInfo>& currIterTile, int idNeighbour)
+void Graph::connectionEvenLinesOnRight(const std::pair<unsigned int, TileInfo>& currIterTile, int idNeighbour)
 {
-    if ((currIterTile.second.tileID / lvlInfo.colCount) % 2 != 0)    //Ligne paire, indice ligne impaire (OK)
+    if ((currIterTile.second.tileID / mLevelInfo.colCount) % 2 != 0)    //Ligne paire, indice ligne impaire (OK)
     {
-        if (currIterTile.second.tileID % lvlInfo.colCount == lvlInfo.colCount - 1)  //Dernière colonne (OK)
+        if (currIterTile.second.tileID % mLevelInfo.colCount == mLevelInfo.colCount - 1)  //Dernière colonne (OK)
             mGraph[currIterTile.second.tileID]->setNeighbour(mGraph[idNeighbour], 4, 1); //noeud en haut a gauche
         else
         {
@@ -82,7 +91,7 @@ void Graph::connectionEvenLinesOnRight(LevelInfo& lvlInfo, const std::pair<unsig
         }
     }
     else
-        if (currIterTile.second.tileID % lvlInfo.colCount == 0)
+        if (currIterTile.second.tileID % mLevelInfo.colCount == 0)
             mGraph[currIterTile.second.tileID]->setNeighbour(mGraph[idNeighbour], 5, 2); // noeud en haut a droite
         else
         {
