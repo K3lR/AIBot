@@ -62,7 +62,7 @@ EDirection NPC::chooseDirection(const unsigned int& destinationTileID, const uns
 void NPC::findNewPath()
 {
 	mNearestTargets.erase(mNearestTargets.begin());
-	mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID,mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(mNearestTargets.begin()->second)));
+	mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID, mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(mNearestTargets.begin()->second)));
 	mNbTurnBlocked = 0;
 }
 
@@ -79,12 +79,12 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 	std::list<NodeRecord*> openedList{}, closedList{};
 	openedList.emplace_back(currentRecord);
 
+	NodeRecord* prevRecord;
+	NodeRecord* endNodeRecord;
 	while (!openedList.empty())
 	{
-
 		//Get smallest element
 		currentRecord = *std::min_element(std::begin(openedList), std::end(openedList));
-		NodeRecord* prevRecord = new NodeRecord{};
 		Node* currentNode{ currentRecord->mNode };
 
 		//Found goal - yay!
@@ -92,7 +92,6 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 			break;
 
 		//If not, check neighbours to find smallest cost step
-		NodeRecord* endNodeRecord = new NodeRecord{};
 		for (auto& neighbour : currentNode->getNeighbours())
 		{
 			if (!neighbour || neighbour->isAvailable())
@@ -162,6 +161,9 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 			currentRecord = currentRecord->mPrevious;
 		}
 	}
+
+	delete currentRecord;
+	delete endNodeRecord;
 
 	return finalPath;
 }
