@@ -2,8 +2,6 @@
 #include "Node.h"
 #include "NPC.h"
 #include "Globals.h"
-#include "BehaviorTree\Blackboard.h"
-#include "BehaviourNPC\OmniscientBehaviour.h"
 
 EDirection NPC::chooseDirection(const unsigned int& destinationTileID, const unsigned int& npcTileID)
 {
@@ -61,14 +59,19 @@ EDirection NPC::chooseDirection(const unsigned int& destinationTileID, const uns
 	}
 }
 
+void NPC::initPath(const distance_id_pair_type& nearest)
+{
+	if(!nearest.empty())
+		mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID, mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(mNearestTargets.begin()->second)));
+}
+
 void NPC::findNewPath()
 {
-	mNearestTargets.erase(mNearestTargets.begin());
-	mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID,mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(mNearestTargets.begin()->second)));
+	setPath();
 	mNbTurnBlocked = 0;
 }
 
-//***TODO : /!\ MEMO LEAK
+//***TODO : HUGE MEMORY LEAK
 std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned int& startID, const unsigned int& goalID, Heuristic& h)
 {
 
@@ -82,12 +85,12 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 	std::list<NodeRecord*> openedList{}, closedList{};
 	openedList.emplace_back(currentRecord);
 
+	NodeRecord* prevRecord;
+	NodeRecord* endNodeRecord;
 	while (!openedList.empty())
 	{
-
 		//Get smallest element
 		currentRecord = *std::min_element(std::begin(openedList), std::end(openedList));
-		NodeRecord* prevRecord = new NodeRecord{};
 		Node* currentNode{ currentRecord->mNode };
 
 		//Found goal - yay!
@@ -95,16 +98,14 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 			break;
 
 		//If not, check neighbours to find smallest cost step
-		NodeRecord* endNodeRecord = new NodeRecord{};
-		for (int idNeighbour{}; idNeighbour < currentNode->getNeighbours().size(); ++idNeighbour)
+		for (auto& neighbour : currentNode->getNeighbours())
 		{
-			Node* neighbour = currentNode->getNeighbour(idNeighbour);
-			if (!neighbour || neighbour->isNotAvailable()
-				           || currentNode->hasWall(idNeighbour))
+			if (!neighbour || neighbour->isNotAvailable())
 			{
 				continue;
 			}
 
+			//Node* endNode = neighbour;
 			cost_type endNodeCost = currentRecord->mCostSoFar + Graph::Instance().CONNECTION_COST;
 			cost_type endNodeHeuristic{ 0 };
 
@@ -167,43 +168,91 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 		}
 	}
 
+	delete currentRecord;
+	delete endNodeRecord;
+
 	return finalPath;
 }
 
-void NPC::move(std::vector<Action *> &_actionList)
+void NPC::explore(std::vector<Action*>& actionList)
+{
+	auto currNode = Graph::Instance().getNode(mInfos.tileID);
+	auto neighbourTiles = currNode->getNeighbours();
+	int tileIdToExplore{};
+
+	std::vector<Node*> accessibleNeighbours = getAccessibleNeighbours(neighbourTiles, currNode);
+	tileIdToExplore = getLessVisitedTileId(accessibleNeighbours);
+	mExploredTiles[tileIdToExplore]++;
+	
+	EDirection dir = chooseDirection(tileIdToExplore, mInfos.tileID);
+	actionList.emplace_back(new Move{ mInfos.npcID, dir });
+}
+
+std::vector<Node*> NPC::getAccessibleNeighbours(const std::vector<Node*>& neighbourTiles, Node* currNode)
+{
+	std::vector<Node*> accessibleNeighbours;
+	for (int i{}; i < neighbourTiles.size(); ++i)
+	{
+		if (neighbourTiles[i] && !neighbourTiles[i]->isNotAvailable()
+			&& !currNode->hasWall(i))
+		{
+			accessibleNeighbours.emplace_back(neighbourTiles[i]);
+		}
+	}
+
+	return accessibleNeighbours;
+}
+
+void NPC::followPath(std::vector<Action *> &actionList)
 {
 	EDirection dir = chooseDirection(mPathToGoal.front(), mInfos.tileID);
-	_actionList.emplace_back(new Move{ mInfos.npcID, dir });
+	actionList.emplace_back(new Move{ mInfos.npcID, dir });
 
 	updatePathToGoal();
 }
 
-void NPC::initBehaviour(LevelInfo& lvlInfo)
+void NPC::setPath()
 {
-	if (lvlInfo.bOmnicientMode)
-	{
-		mBehavior = new OmniscientBehaviour{};
-	}
-	else
-	{
-		//mBehavior = new  VisionBehavior(_levelInfo.visionRange);
-	}
-}
-
-void NPC::initPath()
-{
-	if (!mNearestTargets.empty())
-		mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID, mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(mNearestTargets.begin()->second)));
+	if(hasGoal())
+		mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID, mGoalID, Heuristic(Graph::Instance().getNode(mGoalID)));
 }
 
 void NPC::update(std::vector<Action*>& actionList)
 {
-	mBehavior->update(mBoard, this);
-	actionList.insert(actionList.end(), mBoard.getActionList().begin(), mBoard.getActionList().end());
+	if (hasGoal())
+	{
+		if (isArrived())
+		{
+			return;
+		}
+	
+		if (isBlocked())
+		{
+			++mNbTurnBlocked;
+			if (mNbTurnBlocked == 1)
+			{
+				return;
+			}
+			else if (mNbTurnBlocked == 2)
+			{
+				findNewPath();
+			}
+		}
+	
+		followPath(actionList);
+	}
+	else
+	{
+		explore(actionList);
+	}
 }
 
-//***TODO : reloacte in update()
-void NPC::updateInfos(const NPCInfo& npcInfo, const std::vector<NPC*>& npcs)
+void NPC::updateInfo(const NPCInfo& npcInfo)
 {
 	mInfos = npcInfo;
+}
+
+unsigned int NPC::getTileID()
+{
+	return mInfos.tileID;
 }

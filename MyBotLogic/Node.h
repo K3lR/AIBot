@@ -5,60 +5,117 @@
 #include <vector>
 
 
-class Node 
+class Node
 {
 public:
-    enum { NB_NEIGHBOURS = 6 };
+	enum { NB_NEIGHBOURS = 6 };
 
 private:
-    TileInfo mTileInfo;
+	TileInfo mTileInfo;
 
-    Node* mFrom;                        //Maybe not so useful...
-    std::vector<Node*> mNeighbours;     //CW - 0 on right side
-	bool mWalls[NB_NEIGHBOURS] {};
+	std::vector<Node*> mNeighbours{ NB_NEIGHBOURS };	//CW - 0 on right side
+	bool mWalls[NB_NEIGHBOURS]{};
 	struct Flags
 	{
-		//***TODO : flag taken, changer obstacle => hasWall, hasWindow
 		bool taken;
 		bool obstacle;
 		bool forbidden;
 	} mFlags{};
 
 public:
-    Node(Node* other)
-        : mTileInfo(other->mTileInfo), mFrom{ other->mFrom }, mNeighbours{ other->mNeighbours }
-    {}
-    Node(TileInfo& currTileInfo)
-        : mTileInfo( currTileInfo ), mFrom{ nullptr }, mNeighbours{ NB_NEIGHBOURS }
-    {}
-    Node(TileInfo& currTileInfo, Node* from)
-        : mTileInfo(currTileInfo), mFrom{ from }, mNeighbours{ NB_NEIGHBOURS }
-    {
-        mNeighbours[0] = nullptr;
-        mNeighbours[1] = nullptr;
-        mNeighbours[2] = nullptr;
-        mNeighbours[3] = from;
-        mNeighbours[4] = nullptr;
-        mNeighbours[5] = nullptr;
+	Node(Node* other)
+		: mTileInfo(other->mTileInfo), mNeighbours{ other->mNeighbours }
+	{}
+	Node(const int& id, Node* from = nullptr)
+	{
+		mTileInfo.tileID = id;
+		if (from)
+			linkWith(from);
+	}
+	Node(TileInfo& currTileInfo)
+		: mTileInfo(currTileInfo)
+	{}
+	Node(TileInfo& currTileInfo, Node* from)
+		: mTileInfo(currTileInfo)
+	{
+		linkWith(from);
+	}
 
-        from->mNeighbours[0] = this;
-    }
 
-    ~Node()
-    {
-        delete mFrom;
-    }
+	~Node()
+	{ }
 
-    unsigned int getID() const { return mTileInfo.tileID; }
-    std::set<ETileAttribute>& getTileAttributes() { return mTileInfo.tileAttributes; }
-    std::vector<Node*> getNeighbours() const { return mNeighbours; }
-    Node* getNeighbour(int i) const { return mNeighbours[i]; }
-    void setNeighbour(Node* neighbour, unsigned int idxNeighb, unsigned int idxCurr)
-    {
-        mNeighbours[idxNeighb] = neighbour;
-        neighbour->mNeighbours[idxCurr] = this;
-    }
-	void setForbiddenFlag(const bool& flagVal) { mFlags.forbidden = flagVal; }
+
+	unsigned int getID() const { return mTileInfo.tileID; }
+	std::set<ETileAttribute>& getTileAttributes() { return mTileInfo.tileAttributes; }
+	std::vector<Node*> getNeighbours() const { return mNeighbours; }
+	Node* getNeighbour(int i) const { return mNeighbours[i]; }
+
+	void setNeighbour(Node* neighbour, unsigned int idxNeighb, unsigned int idxCurr)
+	{
+		mNeighbours[idxNeighb] = neighbour;
+		neighbour->mNeighbours[idxCurr] = this;
+	}
+	void setWalls(unsigned int edgecost[])
+	{
+		unsigned int id{};
+		for (unsigned int* i = edgecost; i < edgecost + 8; ++i, ++id)
+		{
+			unsigned int eCost = *i;
+			if (!*i)
+			{
+				unsigned int idWall{};
+				if (id <= 1)
+				{
+					idWall = 5;
+				}
+				else if (id <= 3)
+				{
+					idWall = id - 2;
+				}
+				else if (id <= 7)
+				{
+					idWall = id - 3;
+				}
+				mWalls[idWall] = true;
+
+				if (mNeighbours[idWall])
+				{
+					if (idWall <= 2)
+						mNeighbours[idWall]->mWalls[idWall + 3] = true;
+
+					else //idWall : [3;5]
+						mNeighbours[idWall]->mWalls[idWall - 3] = true;
+				}
+
+			}
+		}
+	}
+
+	void updateInfo(const TileInfo& tileInfo)
+	{
+		mTileInfo = tileInfo;
+		setFlags(tileInfo.tileAttributes);
+	}
+
+	bool isNotAvailable() const
+	{
+		return mFlags.obstacle || mFlags.forbidden
+			|| mFlags.taken;
+	}
+	bool hasWall(const unsigned int& idNeighbour) const
+	{
+		return mWalls[idNeighbour];
+	}
+	bool& taken() { return mFlags.taken; }
+	bool& obstacle() { return mFlags.obstacle; }
+
+private:
+	void linkWith(Node* n)
+	{
+		mNeighbours[3] = n;
+		n->mNeighbours[0] = this;
+	}
 	void setFlags(const std::set<ETileAttribute>& tileAttributes)
 	{
 		if (std::find(
@@ -80,41 +137,6 @@ public:
 			mFlags.forbidden = true;
 		}
 	}
-	void setWalls(unsigned int* edgecost)
-	{
-		unsigned int id{};
-		for (unsigned int* i = edgecost; i < edgecost + 8; ++i, ++id)
-		{
-			unsigned int eCost = *i;
-			if (!*i)
-			{
-				unsigned int idNeighbour{};
-				if (id <= 1)
-				{
-					idNeighbour = 5;
-				}
-				else if (id <= 3)
-				{
-					idNeighbour = id - 2;
-				}
-				else if (id <= 7)
-				{
-					idNeighbour = id - 3;
-				}
-				mWalls[idNeighbour] = true;
-			}
-		}
-	}
-	bool isNotAvailable() const
-	{
-		return mFlags.obstacle || mFlags.forbidden;
-	}
-	bool hasWall(const unsigned int& idNeighbour) const
-	{
-		return mWalls[idNeighbour];
-	}
-	bool& taken() { return mFlags.taken; }
-	bool& obstacle() { return mFlags.obstacle; }
 };
 
 #endif // !NODE_H

@@ -42,16 +42,15 @@ public:
     /* Personal content */
 
     using cost_type = Graph::cost_type;
+	using map_type = Graph::map_type;
     using distance_id_pair_type = std::multimap<cost_type, unsigned int>;
 
 private:
     std::vector<NPC*> mNPCs;
 
-    distance_id_pair_type findNearestTargetsByNPC(const std::vector<Node*>&, const NPCInfo&);
-    void initNpcs(LevelInfo&);
-    void updateTurn(const TurnInfo&);
-
-
+    distance_id_pair_type findNearestTargetsByNPC(const Graph&, const NPCInfo&);
+    void initNpcs();
+    void updateTurn(TurnInfo& turn);
 
 protected:
     Logger mLogger;

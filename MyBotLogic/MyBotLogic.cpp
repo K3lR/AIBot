@@ -42,7 +42,7 @@ MyBotLogic::MyBotLogic()
 	Sleep(8000);
 
 	Graph::Instance().init(_levelInfo);
-	initNpcs(_levelInfo);
+	initNpcs();
 }
 
 /*virtual*/ void MyBotLogic::OnBotInitialized()
@@ -72,34 +72,68 @@ MyBotLogic::MyBotLogic()
 }
 
 
-MyBotLogic::distance_id_pair_type MyBotLogic::findNearestTargetsByNPC(const std::vector<Node*>& graph, const NPCInfo& npc)
+MyBotLogic::distance_id_pair_type MyBotLogic::findNearestTargetsByNPC(const Graph& graph, const NPCInfo& npc)
 {
 	//Set new heuristic with node corresponding to NPC's tile
-	Heuristic h{ graph[npc.tileID] };
+	Heuristic h{ graph.getNode(npc.tileID) };
 	distance_id_pair_type distancesToTargets;
 	for (Node* target : Graph::Instance().getTargetList())
 	{
-		distancesToTargets.emplace(std::make_pair(h.estimate(target, Graph::Instance().getLevelInfo()), target->getID()));
+		distancesToTargets.emplace(std::make_pair(h.estimate(target, graph.getLevelInfo()), target->getID()));
 	}
 
 	return distancesToTargets;
 }
 
-void MyBotLogic::initNpcs(LevelInfo& lvlInfo)
+void MyBotLogic::initNpcs()
 {
 	for (auto& npcInfoPair : Graph::Instance().getLevelInfo().npcs)
 	{
-		distance_id_pair_type nearestTargets = findNearestTargetsByNPC(Graph::Instance().getGraph(), npcInfoPair.second);
-		mNPCs.emplace_back(new NPC{ npcInfoPair.second, nearestTargets, lvlInfo });
+		distance_id_pair_type nearestTargets = findNearestTargetsByNPC(Graph::Instance(), npcInfoPair.second);
+
+		mNPCs.emplace_back(new NPC{ npcInfoPair.second, nearestTargets });
 	}
 }
 
-void MyBotLogic::updateTurn(const TurnInfo& turnInfo)
+void MyBotLogic::updateTurn(TurnInfo& turnInfo)
 {
 	int i{ 0 };
 	for (auto& npcInfoPair : turnInfo.npcs)
 	{
-		mNPCs[i]->updateInfos(npcInfoPair.second, mNPCs);
+		mNPCs[i]->updateInfo(npcInfoPair.second);
 		++i;
+	}
+
+	Graph::Instance().updateMapInfo(turnInfo);
+	if (!Graph::Instance().getTargetList().empty())
+	{
+		for (auto target : Graph::Instance().getTargetList())
+		{
+			if (!target->taken())
+			{
+				unsigned int min_dist = UINT_MAX;
+				Heuristic h{ target };
+				int npcID{ -1 };
+				for (unsigned int i{}; i < mNPCs.size(); ++i)
+				{
+					if (!mNPCs[i]->hasGoal())
+					{
+						cost_type temp = h.estimate(Graph::Instance().getNode(mNPCs[i]->getTileID()), Graph::Instance().getLevelInfo());
+						if (temp < min_dist)
+						{
+							min_dist = temp;
+							npcID = i;
+						}
+					}
+				}
+				if (npcID > -1)
+				{
+					mNPCs[npcID]->setGoalID(target->getID());
+					mNPCs[npcID]->setPath();
+				}
+			}
+		}
+
+
 	}
 }

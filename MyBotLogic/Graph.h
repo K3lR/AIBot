@@ -17,32 +17,36 @@ class Graph : Incopiable
 {
 public: 
     using cost_type = unsigned int;
+	using map_type = std::map<unsigned int, Node*>;
 	const cost_type CONNECTION_COST{ 10 };
 
 private:
     static Graph singletonGraph;
 
-    std::vector<Node*> mGraph;
+	map_type mGraph;
     std::vector<Node*> mTargets;
 	LevelInfo mLevelInfo;
 
     Graph() noexcept;
-    void addNode(Node* node) { mGraph.emplace_back(node); }
+	void addNode(Node* node);
     void connectSurroundings();
-    void connectionEvenLinesOnRight(const std::pair<unsigned int, TileInfo>&, int);
+	void connectionEvenLinesOnRight(const unsigned int& idNode, const int& idNeighbour);
 
 public : 
     ~Graph() {}
     static Graph& Instance() noexcept { return singletonGraph; }
     void init(LevelInfo&);
+	void initNodeFlags();
 
-    std::vector<Node*> getGraph() const noexcept { return mGraph; }
-    std::vector<Node*> getTargetList() const noexcept { return mTargets; }
-    Node* getNode(int i) const { return mGraph[i]; }
+	void updateMapInfo(TurnInfo& turnInfo);
+
+	map_type getGraph() const noexcept { return mGraph; }
 	LevelInfo getLevelInfo() const { return mLevelInfo; }
+	Node* getNode(int i) const { return mGraph.at(i); }
+	Node* getNode(int i) { return mGraph[i]; }
+    std::vector<Node*> getTargetList() const noexcept { return mTargets; }
 
     bool isEmpty() const noexcept { return mGraph.empty(); }
-
 
 };
 
