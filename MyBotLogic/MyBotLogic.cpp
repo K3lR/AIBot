@@ -15,12 +15,13 @@ MyBotLogic::MyBotLogic()
 {
 }
 
-/*virtual*/ MyBotLogic::~MyBotLogic()
+ MyBotLogic::~MyBotLogic()
 {
-	//Write Code Here
+	for (NPC* npc : mNPCs)
+		delete npc;
 }
 
-/*virtual*/ void MyBotLogic::Configure(int argc, char *argv[], const std::string& _logpath)
+ void MyBotLogic::Configure(int argc, char *argv[], const std::string& _logpath)
 {
 #ifdef BOT_LOGIC_DEBUG
 	mLogger.Init(_logpath, "MyBotLogic.log");
@@ -32,30 +33,30 @@ MyBotLogic::MyBotLogic()
 	//Write Code Here
 }
 
-/*virtual*/ void MyBotLogic::Load()
+ void MyBotLogic::Load()
 {
 	//Write Code Here
 }
 
-/*virtual*/ void MyBotLogic::Init(LevelInfo& _levelInfo)
+ void MyBotLogic::Init(LevelInfo& _levelInfo)
 {
-	Sleep(8000);
+	//Sleep(8000);
 
 	Graph::Instance().init(_levelInfo);
 	initNpcs();
 }
 
-/*virtual*/ void MyBotLogic::OnBotInitialized()
+ void MyBotLogic::OnBotInitialized()
 {
 	//Write Code Here
 }
 
-/*virtual*/ void MyBotLogic::OnGameStarted()
+ void MyBotLogic::OnGameStarted()
 {
 	//Write Code Here
 }
 
-/*virtual*/ void MyBotLogic::FillActionList(TurnInfo& _turnInfo, std::vector<Action*>& _actionList)
+ void MyBotLogic::FillActionList(TurnInfo& _turnInfo, std::vector<Action*>& _actionList)
 {
 
 	updateTurn(_turnInfo);
@@ -66,7 +67,7 @@ MyBotLogic::MyBotLogic()
 	}
 }
 
-/*virtual*/ void MyBotLogic::Exit()
+ void MyBotLogic::Exit()
 {
 	//Write Code Here
 }
@@ -89,9 +90,7 @@ void MyBotLogic::initNpcs()
 {
 	for (auto& npcInfoPair : Graph::Instance().getLevelInfo().npcs)
 	{
-		distance_id_pair_type nearestTargets = findNearestTargetsByNPC(Graph::Instance(), npcInfoPair.second);
-
-		mNPCs.emplace_back(new NPC{ npcInfoPair.second, nearestTargets });
+		mNPCs.emplace_back(new NPC{ npcInfoPair.second });
 	}
 }
 
@@ -105,35 +104,6 @@ void MyBotLogic::updateTurn(TurnInfo& turnInfo)
 	}
 
 	Graph::Instance().updateMapInfo(turnInfo);
-	if (!Graph::Instance().getTargetList().empty())
-	{
-		for (auto target : Graph::Instance().getTargetList())
-		{
-			if (!target->taken())
-			{
-				unsigned int min_dist = UINT_MAX;
-				Heuristic h{ target };
-				int npcID{ -1 };
-				for (unsigned int i{}; i < mNPCs.size(); ++i)
-				{
-					if (!mNPCs[i]->hasGoal())
-					{
-						cost_type temp = h.estimate(Graph::Instance().getNode(mNPCs[i]->getTileID()), Graph::Instance().getLevelInfo());
-						if (temp < min_dist)
-						{
-							min_dist = temp;
-							npcID = i;
-						}
-					}
-				}
-				if (npcID > -1)
-				{
-					mNPCs[npcID]->setGoalID(target->getID());
-					mNPCs[npcID]->setPath();
-				}
-			}
-		}
+	Graph::Instance().updateNpcGoal(mNPCs);
 
-
-	}
 }

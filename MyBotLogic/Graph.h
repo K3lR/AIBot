@@ -9,6 +9,7 @@
 
 class Heuristic;
 class Node;
+class NPC;
 
 struct TileInfo;
 struct TurnInfo;
@@ -33,12 +34,13 @@ private:
 	void connectionEvenLinesOnRight(const unsigned int& idNode, const int& idNeighbour);
 
 public : 
-    ~Graph() {}
+	~Graph();
     static Graph& Instance() noexcept { return singletonGraph; }
-    void init(LevelInfo&);
+    void init(const LevelInfo&);
 	void initNodeFlags();
 
 	void updateMapInfo(TurnInfo& turnInfo);
+	void updateNpcGoal(const std::vector<NPC*> &npcs);
 
 	map_type getGraph() const noexcept { return mGraph; }
 	LevelInfo getLevelInfo() const { return mLevelInfo; }
