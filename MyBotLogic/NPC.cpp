@@ -59,10 +59,18 @@ EDirection NPC::chooseDirection(const unsigned int& destinationTileID, const uns
 	}
 }
 
-void NPC::initPath(const distance_id_pair_type& nearest)
+void NPC::explore(std::vector<Action*>& actionList)
 {
-	if(!nearest.empty())
-		mPathToGoal = pathFinderAStar(Graph::Instance(), mInfos.tileID, mNearestTargets.begin()->second, Heuristic(Graph::Instance().getNode(mNearestTargets.begin()->second)));
+	auto currNode = Graph::Instance().getNode(mInfos.tileID);
+	auto neighbourTiles = currNode->getNeighbours();
+	int tileIdToExplore{};
+
+	std::vector<Node*> accessibleNeighbours = getAccessibleNeighbours(neighbourTiles, currNode);
+	tileIdToExplore = getLessVisitedTileId(accessibleNeighbours);
+	mExploredTiles[tileIdToExplore]++;
+
+	EDirection dir = chooseDirection(tileIdToExplore, mInfos.tileID);
+	actionList.emplace_back(new Move{ mInfos.npcID, dir });
 }
 
 void NPC::findNewPath()
@@ -71,7 +79,50 @@ void NPC::findNewPath()
 	mNbTurnBlocked = 0;
 }
 
-//***TODO : HUGE MEMORY LEAK
+void NPC::followPath(std::vector<Action *> &actionList)
+{
+	EDirection dir = chooseDirection(mPathToGoal.front(), mInfos.tileID);
+	actionList.emplace_back(new Move{ mInfos.npcID, dir });
+
+	updatePathToGoal();
+}
+
+std::vector<Node*> NPC::getAccessibleNeighbours(const std::vector<Node*>& neighbourTiles, Node* currNode)
+{
+	std::vector<Node*> accessibleNeighbours;
+	for (int i{}; i < neighbourTiles.size(); ++i)
+	{
+		if (neighbourTiles[i] && !neighbourTiles[i]->isNotAvailable()
+			&& !currNode->hasWall(i))
+		{
+			accessibleNeighbours.emplace_back(neighbourTiles[i]);
+		}
+	}
+
+	return accessibleNeighbours;
+}
+
+unsigned int NPC::getLessVisitedTileId(std::vector<Node*> accessibleNodes)
+{
+	unsigned int min_count = UINT_MAX;
+	unsigned int minID{};
+	for (int i{ 0 }; i < accessibleNodes.size(); ++i)
+	{
+		int currNodeID{ static_cast<int>(accessibleNodes[i]->getID()) };
+		if (mExploredTiles[currNodeID] == 0)
+		{
+			return currNodeID;
+		}
+
+		if (mExploredTiles[currNodeID] < min_count)
+		{
+			minID = currNodeID;
+			min_count = mExploredTiles[minID];
+		}
+	}
+	return minID;
+}
+
 std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned int& startID, const unsigned int& goalID, Heuristic& h)
 {
 
@@ -105,12 +156,10 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 				continue;
 			}
 
-			//Node* endNode = neighbour;
 			cost_type endNodeCost = currentRecord->mCostSoFar + Graph::Instance().CONNECTION_COST;
 			cost_type endNodeHeuristic{ 0 };
 
 			//If closed node, may have to skip or remove it from closed list
-			//**Remark : nRecord <-> endNodeRecord
 			if ((endNodeRecord = NodeRecord::findIn(closedList, neighbour)))
 			{
 				//If not a shorter route, skip
@@ -119,6 +168,9 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 
 				//If shorter, we need to put it back in the opened list
 				closedList.remove(endNodeRecord);
+
+				//Put record back in opened list
+				openedList.emplace_back(endNodeRecord);
 
 				//Update heuristic
 				endNodeHeuristic = endNodeRecord->mEstimatedTotalCost - endNodeRecord->mCostSoFar;
@@ -134,15 +186,15 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 			else
 			{
 				endNodeRecord = new NodeRecord{ neighbour, 0, h.estimate(neighbour, graph.getLevelInfo()) };
+
+				//Put record back in opened list
+				openedList.emplace_back(endNodeRecord);
 			}
 
 			//Update record
 			endNodeRecord->mCostSoFar = endNodeCost;
 			endNodeRecord->mPrevious = currentRecord;
 			endNodeRecord->mEstimatedTotalCost = endNodeCost + endNodeHeuristic;
-
-			//Put record back in opened list
-			openedList.emplace_back(endNodeRecord);
 
 		}
 		//Update previous
@@ -168,47 +220,14 @@ std::list<unsigned int> NPC::pathFinderAStar(const Graph& graph, const unsigned 
 		}
 	}
 
-	delete currentRecord;
-	delete endNodeRecord;
+	//Cleanup
+	for (NodeRecord *nr : openedList)
+		delete nr;
+
+	for (NodeRecord *nr : closedList)
+		delete nr;
 
 	return finalPath;
-}
-
-void NPC::explore(std::vector<Action*>& actionList)
-{
-	auto currNode = Graph::Instance().getNode(mInfos.tileID);
-	auto neighbourTiles = currNode->getNeighbours();
-	int tileIdToExplore{};
-
-	std::vector<Node*> accessibleNeighbours = getAccessibleNeighbours(neighbourTiles, currNode);
-	tileIdToExplore = getLessVisitedTileId(accessibleNeighbours);
-	mExploredTiles[tileIdToExplore]++;
-	
-	EDirection dir = chooseDirection(tileIdToExplore, mInfos.tileID);
-	actionList.emplace_back(new Move{ mInfos.npcID, dir });
-}
-
-std::vector<Node*> NPC::getAccessibleNeighbours(const std::vector<Node*>& neighbourTiles, Node* currNode)
-{
-	std::vector<Node*> accessibleNeighbours;
-	for (int i{}; i < neighbourTiles.size(); ++i)
-	{
-		if (neighbourTiles[i] && !neighbourTiles[i]->isNotAvailable()
-			&& !currNode->hasWall(i))
-		{
-			accessibleNeighbours.emplace_back(neighbourTiles[i]);
-		}
-	}
-
-	return accessibleNeighbours;
-}
-
-void NPC::followPath(std::vector<Action *> &actionList)
-{
-	EDirection dir = chooseDirection(mPathToGoal.front(), mInfos.tileID);
-	actionList.emplace_back(new Move{ mInfos.npcID, dir });
-
-	updatePathToGoal();
 }
 
 void NPC::setPath()
@@ -252,7 +271,3 @@ void NPC::updateInfo(const NPCInfo& npcInfo)
 	mInfos = npcInfo;
 }
 
-unsigned int NPC::getTileID()
-{
-	return mInfos.tileID;
-}
